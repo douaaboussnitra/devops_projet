@@ -1,0 +1,51 @@
+- name: Installer Docker sur tous les noeuds
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update yum
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Installer Docker
+      yum:
+        name: docker
+        state: present
+
+    - name: Démarrer Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+- name: Installer k3s sur le master
+  hosts: master
+  become: yes
+  tasks:
+    - name: Installer k3s server (force)
+      shell: curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_SELINUX_RPM=true sh -
+
+    - name: Attendre k3s (token)
+      wait_for:
+        path: /var/lib/rancher/k3s/server/node-token
+        timeout: 60
+
+    - name: Récupérer le token k3s
+      fetch:
+        src: /var/lib/rancher/k3s/server/node-token
+        dest: /tmp/k3s-token
+        flat: yes
+
+- name: Joindre le worker au cluster
+  hosts: workers
+  become: yes
+  tasks:
+    - name: Copier le token
+      copy:
+        src: /tmp/k3s-token
+        dest: /tmp/k3s-token
+
+    - name: Installer k3s agent
+      shell: |
+        TOKEN=$(cat /tmp/k3s-token)
+        curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_SELINUX_RPM=true K3S_URL=https://54.235.229.101:6443 K3S_TOKEN=$TOKEN sh -
