@@ -10,11 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+
       - name: Installer dependances
         run: pip install -r requirements.txt
+
       - name: Lancer les tests
         run: pytest test_app.py -v
 
@@ -23,69 +26,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Login DockerHub
         uses: docker/login-action@v2
         with:
-          username: \${{ secrets.DOCKER_USERNAME }}
-          password: \${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Build et Push image
         run: |
-          docker build -t \${{ secrets.DOCKER_USERNAME }}/devops-app:latest .
-          docker push \${{ secrets.DOCKER_USERNAME }}/devops-app:latest
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/devops-app:latest .
+          docker push ${{ secrets.DOCKER_USERNAME }}/devops-app:latest
 
   deploy:
     needs: build-push
     runs-on: ubuntu-latest
+
+    env:
+      KUBECONFIG: /tmp/kubeconfig
+      IMAGE: ${{ secrets.DOCKER_USERNAME }}/devops-app:latest
+
     steps:
       - uses: actions/checkout@v3
 
-      - name: Deploy via SSH sur AWS master
-        uses: appleboy/ssh-action@master
-        with:
-          host: \${{ secrets.SERVER_IP }}
-          username: \${{ secrets.SERVER_USER }}
-          key: \${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /home/ubuntu
-            mkdir -p k3s
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
 
-            cat > k3s/deployment.yaml << 'YAML'
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: devops-app
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: devops-app
-  template:
-    metadata:
-      labels:
-        app: devops-app
-    spec:
-      containers:
-      - name: devops-app
-        image: douaabousnitra/devops-app:latest
-        ports:
-        - containerPort: 5000
-YAML
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        run: |
+          printf '%s' "$KUBE_CONFIG_DATA" > "$KUBECONFIG"
+          chmod 600 "$KUBECONFIG"
 
-            cat > k3s/service.yaml << 'YAML'
-apiVersion: v1
-kind: Service
-metadata:
-  name: devops-app-service
-spec:
-  type: NodePort
-  selector:
-    app: devops-app
-  ports:
-  - port: 80
-    targetPort: 5000
-    nodePort: 30080
-YAML
+      - name: Apply Kubernetes manifests
+        run: kubectl apply -f k8s/
 
-            kubectl apply -f k3s/deployment.yaml
-            kubectl apply -f k3s/service.yaml
-            kubectl rollout status deployment/devops-app --timeout=60s
+      - name: Update image
+        run: |
+          kubectl set image deployment/devops-app devops-app=$IMAGE
+          kubectl rollout restart deployment/devops-app
+          kubectl rollout status deployment/devops-app --timeout=60s
