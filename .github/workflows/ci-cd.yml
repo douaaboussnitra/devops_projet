@@ -43,27 +43,29 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      KUBECONFIG: /tmp/kubeconfig
       IMAGE: ${{ secrets.DOCKER_USERNAME }}/devops-app:latest
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Configure kubeconfig
-        env:
-          KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
-        run: |
-          printf '%s' "$KUBE_CONFIG_DATA" > "$KUBECONFIG"
-          chmod 600 "$KUBECONFIG"
-
-      - name: Apply Kubernetes manifests
-        run: kubectl apply -f k3s/
-
-      - name: Update image
-        run: |
-          kubectl set image deployment/devops-app devops-app=$IMAGE
-          kubectl rollout restart deployment/devops-app
-          kubectl rollout status deployment/devops-app --timeout=60s
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            echo "Starting deployment on EC2..."
+            
+            # Set kubeconfig to K3s
+            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+            
+            # Apply your manifest
+            kubectl apply -f ~/k3s.yaml --insecure-skip-tls-verify
+            
+            # Update deployment image
+            kubectl set image deployment/devops-app devops-app=$IMAGE
+            kubectl rollout restart deployment/devops-app
+            kubectl rollout status deployment/devops-app --timeout=120s
+            
+            echo "Deployment completed successfully."
