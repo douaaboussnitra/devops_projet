@@ -56,12 +56,11 @@ jobs:
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
         run: |
-          printf '%s' "$KUBE_CONFIG_DATA" > "$KUBECONFIG"
+          echo "$KUBE_CONFIG_DATA" | base64 --decode > "$KUBECONFIG"
           chmod 600 "$KUBECONFIG"
 
       - name: Apply Kubernetes manifests
-        run: |
-          kubectl apply -f k3s/ --insecure-skip-tls-verify --validate=false
+        run: kubectl apply -f k3s/ --insecure-skip-tls-verify
 
       - name: Update image
         run: |
