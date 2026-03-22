@@ -60,7 +60,9 @@ jobs:
           chmod 600 "$KUBECONFIG"
 
       - name: Apply Kubernetes manifests
-        run: kubectl apply -f k3s/ --validate=false
+        run: |
+          kubectl config set-cluster default --server=https://98.93.232.34:6443 --insecure-skip-tls-verify=true
+          kubectl apply -f k3s/
 
       - name: Update image
         run: |
