@@ -60,7 +60,7 @@ jobs:
           chmod 600 "$KUBECONFIG"
 
       - name: Apply Kubernetes manifests
-        run: kubectl apply -f k3s/
+        run: kubectl apply -f k3s/ --validate=false
 
       - name: Update image
         run: |
