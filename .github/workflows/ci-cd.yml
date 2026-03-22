@@ -61,8 +61,7 @@ jobs:
 
       - name: Apply Kubernetes manifests
         run: |
-          kubectl config set-cluster default --server=https://98.93.232.34:6443 --insecure-skip-tls-verify=true
-          kubectl apply -f k3s/
+          kubectl apply -f k3s/ --insecure-skip-tls-verify --validate=false
 
       - name: Update image
         run: |
