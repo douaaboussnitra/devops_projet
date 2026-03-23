@@ -64,4 +64,4 @@ jobs:
         run: |
           kubectl set image deployment/devops-app devops-app=$IMAGE
           kubectl rollout restart deployment/devops-app
-          kubectl rollout status deployment/devops-app --timeout=60s
+          kubectl rollout status deployment/devops-app --timeout=180s
