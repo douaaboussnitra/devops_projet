@@ -21,5 +21,13 @@ spec:
             httpGet:
               path: /health
               port: 5000
-            initialDelaySeconds: 15
-            periodSeconds: 5
+            initialDelaySeconds: 20   # wait longer for Flask to start
+            periodSeconds: 5          # check every 5 seconds
+            failureThreshold: 6       # allow 6 failures before marking pod as Unready
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 30   # start checking after app starts
+            periodSeconds: 10         # check every 10s
+            failureThreshold: 3       # restart container if failing 3 times
