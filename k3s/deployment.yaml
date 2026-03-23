@@ -13,13 +13,13 @@ spec:
         app: devops-app
     spec:
       containers:
-      - name: devops-app
-        image: douaabousnitra/devops-app:latest
-        ports:
-        - containerPort: 5000
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 5000
-          initialDelaySeconds: 15
-          periodSeconds: 1
+        - name: devops-app
+          image: douaabousnitra/devops-app:latest
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 5
