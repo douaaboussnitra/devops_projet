@@ -15,6 +15,7 @@ spec:
       containers:
         - name: devops-app
           image: douaabousnitra/devops-app:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
           readinessProbe:
